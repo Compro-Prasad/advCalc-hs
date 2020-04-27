@@ -75,11 +75,11 @@ getOperator (x:xs)
   | otherwise = error ("Invalid operator '" ++ [x] ++ "'")
 
 
-extract pred str = extractInto "" str
+extractIdentifier str = extractInto "" str
   where
     extractInto parsed [] = (parsed, [])
     extractInto parsed (x:xs)
-      | pred x =
+      | isAlphaNum x =
         let (parse, rest) = extractInto parsed xs
         in (x:parse, rest)          -- Extract the identifier into a string
       | otherwise = (parsed, x:xs)  -- Return whatever we recieved
@@ -117,7 +117,7 @@ getTokens (x:xs)
   | x == '(' = [TokenParen OpenParen] ++ (getTokens xs)
   | x == ')' = [TokenParen CloseParen] ++ (getTokens xs)
   | isAlpha x =
-    let (parsed, rest) = extract isAlphaNum (x:xs)
+    let (parsed, rest) = extractIdentifier (x:xs)
     in [TokenIdentifier parsed] ++ (getTokens rest)
   | isDigit x =
     let (token, rest) = extractNum (x:xs)
