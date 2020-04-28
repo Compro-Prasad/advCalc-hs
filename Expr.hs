@@ -1,7 +1,10 @@
-module Expr (generateParseTree
+module Expr (calculateValue
+            , generateParseTree
             , infixToPrefix
             , getTokens) where
 
+
+import Data.Typeable
 import System.IO (putStr, print, putStrLn, putChar)
 import GHC.Unicode (isDigit, isAlpha, isSpace, isAlphaNum)
 
@@ -133,6 +136,14 @@ isOperator (TokenAssignment _) = False
 isOperator (TokenParen _) = False
 isOperator _ = True
 
+isInteger :: Token -> Bool
+isInteger (TokenInteger _) = True
+isInteger _ = False
+
+isFloat :: Token -> Bool
+isFloat (TokenFloat _) = True
+isFloat _ = False
+
 isUnaryOp :: Token -> Bool
 isUnaryOp (TokenBit BitNot) = True
 isUnaryOp _ = False
@@ -246,3 +257,46 @@ generateParseTree tokens =
         | isValue t = (ASTnode t [], rest)
         | otherwise = error ("Invalid token '" ++ show t ++ "'")
   in value
+
+
+convertToFloat :: Token -> Token
+convertToFloat token =
+  case token of
+    TokenInteger value -> TokenFloat (fromIntegral value :: Double)
+    TokenFloat value -> token
+    TokenIdentifier _ -> error "Not implemented yet"
+    _ -> error ("Unable to convert '" ++ show token ++ "' to float.")
+
+
+calculateValue :: ASTtree -> Token
+calculateValue (ASTnode token children)
+  | length children == 0 =
+    case token of
+      TokenInteger _ -> token
+      TokenFloat _ -> token
+      TokenIdentifier _ -> error "Not implemented yet"
+      _ -> error ("Leaf node is '" ++ show token ++ "' which is not a value.")
+  | not $ isOperator token = error (
+      "Non leaf node is '" ++ show token ++ "' which is not an operator."
+      )
+  | isBinaryOp token && length children /= 2 =
+    error ("Binary operator '" ++ show token ++ "' requires exactly two operands.")
+  | isUnaryOp token && length children /= 1 =
+    error ("Unary operator '" ++ show token ++ "' requires exactly one operand.")
+  | isBinaryOp token =
+    let (x1:x2:[]) = children
+        (y1, y2) = (calculateValue x1, calculateValue x2)
+        func = case token of
+          TokenArithmetic Plus -> (+)
+          TokenArithmetic Minus -> (-)
+          TokenArithmetic Multiply -> (*)
+          -- TokenArithmetic Divide -> (/)
+          -- TokenArithmetic Modulo -> mod
+          -- TokenArithmetic Exponent -> (^)
+    in
+      if isInteger y1 && isInteger y2 then
+        let (TokenInteger z1, TokenInteger z2) = (y1, y2)
+        in TokenInteger $ func z1 z2
+      else
+        let (TokenFloat z1, TokenFloat z2) = (convertToFloat y1, convertToFloat y2)
+        in error "Statement not working: TokenFloat $ func z1 z2"

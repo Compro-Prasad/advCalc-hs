@@ -20,4 +20,4 @@ inputLoop func = do
 
 
 main = do
-  inputLoop (generateParseTree . infixToPrefix . getTokens)
+  inputLoop (calculateValue . generateParseTree . infixToPrefix . getTokens)
